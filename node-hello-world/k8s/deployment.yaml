@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: node-hello-world
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: node-hello-world
+  template:
+    metadata:
+      labels:
+        app: node-hello-world
+    spec:
+      containers:
+      - name: node-hello-world
+        image: muhnishmalk/node-hello-world:latest
+        ports:
+        - containerPort: 3000
