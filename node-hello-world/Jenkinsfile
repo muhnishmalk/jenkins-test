@@ -35,7 +35,7 @@ pipeline {
     }
 
     environment {
-        DOCKERHUB_CREDENTIALS = 'dockerhub-credentials'  // Jenkins DockerHub credentials
+        DOCKERHUB_CREDENTIALS = 'dockerhub-credentials'  // Jenkins DockerHub credentials ID
     }
 
     stages {
@@ -69,8 +69,10 @@ pipeline {
                     script {
                         // Using withCredentials to securely pass DockerHub credentials for login
                         withCredentials([usernamePassword(credentialsId: DOCKERHUB_CREDENTIALS, usernameVariable: 'DOCKER_HUB_USERNAME', passwordVariable: 'DOCKER_HUB_PASSWORD')]) {
-                            // DockerHub login
-                            sh "docker login -u $DOCKER_HUB_USERNAME -p $DOCKER_HUB_PASSWORD"
+                            // DockerHub login using --password-stdin
+                            sh """
+                            echo $DOCKER_HUB_PASSWORD | docker login -u $DOCKER_HUB_USERNAME --password-stdin
+                            """
 
                             // Build and tag the image with the build number
                             sh "docker build -t muhnishmalk/node-hello-world:\$BUILD_NUMBER ."
