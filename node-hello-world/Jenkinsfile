@@ -35,7 +35,7 @@ pipeline {
     }
 
     environment {
-        DOCKERHUB_CREDENTIALS = credentials('dockerhub-credentials')  // Jenkins DockerHub credentials
+        DOCKERHUB_CREDENTIALS = 'dockerhub-credentials'  // Jenkins DockerHub credentials
     }
 
     stages {
@@ -56,7 +56,7 @@ pipeline {
             steps {
                 container('docker') {
                     script {
-                        // Update this line with the Dockerfile path and the context directory
+                        // Using the Dockerfile from the 'node-hello-world' directory
                         dockerImage = docker.build("muhnishmalk/node-hello-world", "-f node-hello-world/Dockerfile .")
                     }
                 }
@@ -67,8 +67,16 @@ pipeline {
             steps {
                 container('docker') {
                     script {
-                        docker.withRegistry('https://index.docker.io/v1/', 'DOCKERHUB_CREDENTIALS') {
-                            dockerImage.push('latest')
+                        // Using withCredentials to securely pass DockerHub credentials for login
+                        withCredentials([usernamePassword(credentialsId: DOCKERHUB_CREDENTIALS, usernameVariable: 'DOCKER_HUB_USERNAME', passwordVariable: 'DOCKER_HUB_PASSWORD')]) {
+                            // DockerHub login
+                            sh "docker login -u $DOCKER_HUB_USERNAME -p $DOCKER_HUB_PASSWORD"
+
+                            // Build and tag the image with the build number
+                            sh "docker build -t muhnishmalk/git:\$BUILD_NUMBER ."
+
+                            // Push the image to DockerHub
+                            sh "docker push muhnishmalk/git:\$BUILD_NUMBER"
                         }
                     }
                 }
