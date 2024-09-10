@@ -56,8 +56,8 @@ pipeline {
             steps {
                 container('docker') {
                     script {
-                        // Build Docker image using the Dockerfile in the repository
-                        dockerImage = docker.build("muhnishmalk/node-hello-world")
+                        // Update this line with the Dockerfile path and the context directory
+                        dockerImage = docker.build("muhnishmalk/node-hello-world", "-f node-hello-world/Dockerfile .")
                     }
                 }
             }
