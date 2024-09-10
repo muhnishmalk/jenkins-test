@@ -56,6 +56,9 @@ pipeline {
             steps {
                 container('docker') {
                     script {
+                         sh "pwd"
+                         sh "ls"
+                         sh "sleep 300"
                         // Using the Dockerfile from the 'node-hello-world' directory
                         dockerImage = docker.build("muhnishmalk/node-hello-world", "-f jenkins-test/node-hello-world/Dockerfile .")
                     }
