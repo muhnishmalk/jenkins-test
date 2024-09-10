@@ -73,10 +73,10 @@ pipeline {
                             sh "docker login -u $DOCKER_HUB_USERNAME -p $DOCKER_HUB_PASSWORD"
 
                             // Build and tag the image with the build number
-                            sh "docker build -t muhnishmalk/git:\$BUILD_NUMBER ."
+                            sh "docker build -t muhnishmalk/node-hello-world:\$BUILD_NUMBER ."
 
                             // Push the image to DockerHub
-                            sh "docker push muhnishmalk/git:\$BUILD_NUMBER"
+                            sh "docker push muhnishmalk/node-hello-world:\$BUILD_NUMBER"
                         }
                     }
                 }
