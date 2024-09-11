@@ -99,8 +99,8 @@ pipeline {
     post {
         success {
             script {
-		sh "pwd"
-		sh "ls"
+                sh "pwd"
+                sh "ls"
                 // Check if the file exists before archiving
                 if (fileExists('last_successful_build_tag.txt')) {
                     archiveArtifacts artifacts: 'last_successful_build_tag.txt', onlyIfSuccessful: true
