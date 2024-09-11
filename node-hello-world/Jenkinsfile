@@ -62,6 +62,10 @@ pipeline {
                             sh """
                             echo $DOCKER_HUB_PASSWORD | docker login -u $DOCKER_HUB_USERNAME --password-stdin
                             """
+                            
+                            sh "pwd"
+                            sh "ls"
+                            sh "sleep 300"
 
                             // Build and tag the image with the build number
                             sh "docker build -t muhnishmalk/node-hello-world:\$BUILD_NUMBER node-hello-world/ ."
