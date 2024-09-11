@@ -36,9 +36,9 @@ pipeline {
 
     environment {
         DOCKERHUB_CREDENTIALS = 'dockerhub-credentials'
-        ARGOCD_SERVER = 'http://192.168.49.2:31313' // Replace with your Minikube IP and NodePort
-        ARGOCD_CREDENTIALS = 'argocd-credentials' // Replace with your Jenkins credentials ID
-        ARGOCD_APP_NAME = 'your-argocd-app-name' // Replace with your ArgoCD Application name
+        ARGOCD_SERVER = 'http://192.168.49.2:31313'
+        ARGOCD_CREDENTIALS = 'argocd-credentials'
+        ARGOCD_APP_NAME = 'your-argocd-app-name'
     }
 
     stages {
@@ -82,11 +82,12 @@ pipeline {
             steps {
                 withCredentials([usernamePassword(credentialsId: ARGOCD_CREDENTIALS, usernameVariable: 'ARGOCD_USERNAME', passwordVariable: 'ARGOCD_PASSWORD')]) {
                     script {
+                        def syncUrl = "${ARGOCD_SERVER}/api/v1/applications/${ARGOCD_APP_NAME}/sync"
                         sh """
-                        curl -X POST -u $ARGOCD_USERNAME:$ARGOCD_PASSWORD \
+                        curl -X POST -u ${ARGOCD_USERNAME}:${ARGOCD_PASSWORD} \
                             -H "Content-Type: application/json" \
-                            -d '{"revision": "$BUILD_NUMBER"}' \
-                            $ARGOCD_SERVER/api/v1/applications/$ARGOCD_APP_NAME/sync
+                            -d '{"revision": "${BUILD_NUMBER}"}' \
+                            ${syncUrl}
                         """
                     }
                 }
@@ -100,7 +101,7 @@ pipeline {
         }
 
         always {
-            cleanWs() 
+            deleteDir() // Alternative to cleanWs
         }
     }
 }
