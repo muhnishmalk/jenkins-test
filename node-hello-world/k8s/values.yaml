@@ -1,0 +1,10 @@
+replicaCount: 2
+
+image:
+  repository: muhnishmalk/node-hello-world
+  tag: latest
+
+service:
+  type: NodePort
+  port: 3000
+  nodePort: 30001

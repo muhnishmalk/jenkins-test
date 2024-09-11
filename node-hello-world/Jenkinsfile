@@ -36,9 +36,9 @@ pipeline {
 
     environment {
         DOCKERHUB_CREDENTIALS = 'dockerhub-credentials'
-        ARGOCD_SERVER = 'http://192.168.49.2:31313'
+        ARGOCD_SERVER = 'http://192.168.49.2:31313' // Replace with your ArgoCD server URL
         ARGOCD_CREDENTIALS = 'argocd-credentials'
-        ARGOCD_APP_NAME = 'your-argocd-app-name'
+        ARGOCD_APP_NAME = 'your-argocd-app-name' // Replace with your ArgoCD application name
     }
 
     stages {
@@ -54,7 +54,7 @@ pipeline {
             }
         }
 
-        stage('Push to DockerHub') {
+        stage('Build and Push Docker Image') {
             steps {
                 container('docker') {
                     script {
@@ -64,7 +64,7 @@ pipeline {
                             """
                             
                             def buildTag = "muhnishmalk/node-hello-world:\$BUILD_NUMBER"
-                            sh "docker build -t ${buildTag} node-hello-world/"
+                            sh "docker build -t ${buildTag} ."
                             sh "docker push ${buildTag}"
 
                             // Write the build tag to a file
