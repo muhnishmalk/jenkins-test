@@ -60,18 +60,18 @@ pipeline {
                     script {
                         withCredentials([usernamePassword(credentialsId: DOCKERHUB_CREDENTIALS, usernameVariable: 'DOCKER_HUB_USERNAME', passwordVariable: 'DOCKER_HUB_PASSWORD')]) {
                             sh """
-                            echo $DOCKER_HUB_PASSWORD | docker login -u $DOCKER_HUB_USERNAME --password-stdin
+                            echo \$DOCKER_HUB_PASSWORD | docker login -u \$DOCKER_HUB_USERNAME --password-stdin
                             """
                             
-                            sh "pwd"
-                            sh "ls"
-
                             def buildTag = "muhnishmalk/node-hello-world:\$BUILD_NUMBER"
-
                             sh "docker build -t ${buildTag} node-hello-world/"
                             sh "docker push ${buildTag}"
 
+                            // Write the build tag to a file
                             writeFile file: 'last_successful_build_tag.txt', text: buildTag
+
+                            // Debugging: Verify file creation
+                            sh "cat last_successful_build_tag.txt"
                         }
                     }
                 }
@@ -84,7 +84,7 @@ pipeline {
                     script {
                         def syncUrl = "${ARGOCD_SERVER}/api/v1/applications/${ARGOCD_APP_NAME}/sync"
                         sh """
-                        curl -X POST -u ${ARGOCD_USERNAME}:${ARGOCD_PASSWORD} \
+                        curl -X POST -u \$ARGOCD_USERNAME:\$ARGOCD_PASSWORD \
                             -H "Content-Type: application/json" \
                             -d '{"revision": "${BUILD_NUMBER}"}' \
                             ${syncUrl}
@@ -97,11 +97,18 @@ pipeline {
 
     post {
         success {
-            archiveArtifacts artifacts: 'last_successful_build_tag.txt', onlyIfSuccessful: true
+            script {
+                // Check if the file exists before archiving
+                if (fileExists('last_successful_build_tag.txt')) {
+                    archiveArtifacts artifacts: 'last_successful_build_tag.txt', onlyIfSuccessful: true
+                } else {
+                    echo 'File last_successful_build_tag.txt does not exist'
+                }
+            }
         }
 
         always {
-            deleteDir() // Alternative to cleanWs
+            deleteDir() // Clean up the workspace
         }
     }
 }
