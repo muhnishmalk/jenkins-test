@@ -36,6 +36,9 @@ pipeline {
 
     environment {
         DOCKERHUB_CREDENTIALS = 'dockerhub-credentials'
+        ARGOCD_SERVER = 'http://10.0.0.1:31313' // Replace with your NodePort and external IP
+        ARGOCD_CREDENTIALS = 'argocd-credentials' // Replace with your Jenkins credentials ID
+        ARGOCD_APP_NAME = 'your-argocd-app-name' // Replace with your ArgoCD Application name
     }
 
     stages {
@@ -70,6 +73,21 @@ pipeline {
 
                             writeFile file: 'last_successful_build_tag.txt', text: buildTag
                         }
+                    }
+                }
+            }
+        }
+
+        stage('Sync with ArgoCD') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: ARGOCD_CREDENTIALS, usernameVariable: 'ARGOCD_USERNAME', passwordVariable: 'ARGOCD_PASSWORD')]) {
+                    script {
+                        sh """
+                        curl -X POST -u $ARGOCD_USERNAME:$ARGOCD_PASSWORD \
+                            -H "Content-Type: application/json" \
+                            -d '{"revision": "$BUILD_NUMBER"}' \
+                            $ARGOCD_SERVER/api/v1/applications/$ARGOCD_APP_NAME/sync
+                        """
                     }
                 }
             }
