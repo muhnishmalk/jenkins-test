@@ -20,7 +20,7 @@ pipeline {
                 - cat
                 tty: true
                 securityContext:
-                  privileged: true  # Ensure the container has access to Docker socket
+                  privileged: true
                 volumeMounts:
                 - name: docker-socket
                   mountPath: /var/run/docker.sock
@@ -35,7 +35,7 @@ pipeline {
     }
 
     environment {
-        DOCKERHUB_CREDENTIALS = 'dockerhub-credentials'  // Jenkins DockerHub credentials ID
+        DOCKERHUB_CREDENTIALS = 'dockerhub-credentials'
     }
 
     stages {
@@ -44,7 +44,6 @@ pipeline {
                 container('ubuntu') {
                     script {
                         sh '''
-                        # Update the system and install any required packages
                         apt-get update && apt-get install -y curl git
                         '''
                     }
@@ -56,9 +55,7 @@ pipeline {
             steps {
                 container('docker') {
                     script {
-                        // Using withCredentials to securely pass DockerHub credentials for login
                         withCredentials([usernamePassword(credentialsId: DOCKERHUB_CREDENTIALS, usernameVariable: 'DOCKER_HUB_USERNAME', passwordVariable: 'DOCKER_HUB_PASSWORD')]) {
-                            // DockerHub login using --password-stdin
                             sh """
                             echo $DOCKER_HUB_PASSWORD | docker login -u $DOCKER_HUB_USERNAME --password-stdin
                             """
@@ -66,16 +63,11 @@ pipeline {
                             sh "pwd"
                             sh "ls"
 
-                            // Define the build tag using the build number
                             def buildTag = "muhnishmalk/node-hello-world:\$BUILD_NUMBER"
 
-                            // Build and tag the image with the build number
                             sh "docker build -t ${buildTag} node-hello-world/"
-
-                            // Push the image to DockerHub
                             sh "docker push ${buildTag}"
 
-                            // Write the successful build tag to a file
                             writeFile file: 'last_successful_build_tag.txt', text: buildTag
                         }
                     }
@@ -86,12 +78,11 @@ pipeline {
 
     post {
         success {
-            // Archive the build tag file only if the build is successful
             archiveArtifacts artifacts: 'last_successful_build_tag.txt', onlyIfSuccessful: true
         }
 
         always {
-            deleteDir()  // Clean the workspace after the job completes
+            cleanWs() 
         }
     }
 }
