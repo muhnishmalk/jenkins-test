@@ -91,7 +91,7 @@ pipeline {
         }
 
         always {
-            cleanWs()  // Clean the workspace after the job completes
+            deleteDir()  // Clean the workspace after the job completes
         }
     }
 }
