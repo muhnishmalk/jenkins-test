@@ -39,6 +39,9 @@ pipeline {
         ARGOCD_SERVER = 'http://192.168.49.2:31313'
         ARGOCD_CREDENTIALS = 'argocd-credentials'
         ARGOCD_APP_NAME = 'your-argocd-app-name'
+        IMAGE_NAME = "muhnishmalk/node-hello-world"
+        BUILD_TAG = "${IMAGE_NAME}:${BUILD_NUMBER}"
+        PREVIOUS_IMAGE_TAG = "${IMAGE_NAME}:previous"  // Tag used for rollback
     }
 
     stages {
@@ -62,10 +65,30 @@ pipeline {
                             sh """
                             echo \$DOCKER_HUB_PASSWORD | docker login -u \$DOCKER_HUB_USERNAME --password-stdin
                             """
+
+                            // Save the previous image before building the new one
+                            sh "docker pull ${IMAGE_NAME}:latest || true"  // Pull previous image, if available
+                            sh "docker tag ${IMAGE_NAME}:latest ${PREVIOUS_IMAGE_TAG} || true"  // Tag it for rollback
                             
-                            def buildTag = "muhnishmalk/node-hello-world:\$BUILD_NUMBER"
-                            sh "docker build -t ${buildTag} node-hello-world/"
-                            sh "docker push ${buildTag}"
+                            try {
+                                // Build new image
+                                sh "docker build -t ${BUILD_TAG} node-hello-world/"
+                                
+                                // Push the new image
+                                sh "docker push ${BUILD_TAG}"
+                                
+                                // Tag the new image as latest
+                                sh "docker tag ${BUILD_TAG} ${IMAGE_NAME}:latest"
+                                sh "docker push ${IMAGE_NAME}:latest"
+                            } catch (Exception e) {
+                                // Rollback in case of failure
+                                echo "Build failed. Rolling back to previous image."
+                                sh "docker tag ${PREVIOUS_IMAGE_TAG} ${IMAGE_NAME}:latest"
+                                sh "docker push ${IMAGE_NAME}:latest"
+                                
+                                // Fail the build after rollback
+                                error("Build failed. Rolled back to previous image.")
+                            }
                         }
                     }
                 }
@@ -92,6 +115,10 @@ pipeline {
     post {
         success {
             echo 'Build and push successful, and ArgoCD sync triggered.'
+        }
+
+        failure {
+            echo 'Build failed and rollback completed.'
         }
 
         always {
