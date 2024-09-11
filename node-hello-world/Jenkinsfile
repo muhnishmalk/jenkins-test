@@ -66,16 +66,6 @@ pipeline {
                             def buildTag = "muhnishmalk/node-hello-world:\$BUILD_NUMBER"
                             sh "docker build -t ${buildTag} node-hello-world/"
                             sh "docker push ${buildTag}"
-
-                            // Write the build tag to a file in the workspace
-                            writeFile file: "${env.WORKSPACE}/last_successful_build_tag.txt", text: buildTag
-
-                            // Debugging: Verify file creation and contents
-                            sh "echo 'Listing files in workspace:'"
-                            sh "ls -l ${env.WORKSPACE}" // List files to confirm location
-
-                            sh "echo 'Displaying contents of last_successful_build_tag.txt:'"
-                            sh "cat ${env.WORKSPACE}/last_successful_build_tag.txt" // Show file contents
                         }
                     }
                 }
@@ -101,15 +91,7 @@ pipeline {
 
     post {
         success {
-            script {
-                // Check if the file exists before archiving
-                if (fileExists("${env.WORKSPACE}/last_successful_build_tag.txt")) {
-                    echo "File last_successful_build_tag.txt exists. Archiving it."
-                    archiveArtifacts artifacts: "${env.WORKSPACE}/last_successful_build_tag.txt", onlyIfSuccessful: true
-                } else {
-                    echo 'File last_successful_build_tag.txt does not exist'
-                }
-            }
+            echo 'Build and push successful, and ArgoCD sync triggered.'
         }
 
         always {
