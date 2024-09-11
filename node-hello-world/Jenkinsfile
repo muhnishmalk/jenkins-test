@@ -82,7 +82,7 @@ pipeline {
             steps {
                 withCredentials([usernamePassword(credentialsId: ARGOCD_CREDENTIALS, usernameVariable: 'ARGOCD_USERNAME', passwordVariable: 'ARGOCD_PASSWORD')]) {
                     script {
-                        def syncUrl = "${ARGOCD_SERVER}/api/v1/applications/${ARGOCD_APP_NAME}/sync"
+                        def syncUrl = "${env.ARGOCD_SERVER}/api/v1/applications/${env.ARGOCD_APP_NAME}/sync"
                         sh """
                         curl -X POST -u \$ARGOCD_USERNAME:\$ARGOCD_PASSWORD \
                             -H "Content-Type: application/json" \
