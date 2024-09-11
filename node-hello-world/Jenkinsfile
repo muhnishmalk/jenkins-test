@@ -36,7 +36,7 @@ pipeline {
 
     environment {
         DOCKERHUB_CREDENTIALS = 'dockerhub-credentials'
-        ARGOCD_SERVER = 'http://10.0.0.1:31313' // Replace with your NodePort and external IP
+        ARGOCD_SERVER = 'http://192.168.49.2:31313' // Replace with your Minikube IP and NodePort
         ARGOCD_CREDENTIALS = 'argocd-credentials' // Replace with your Jenkins credentials ID
         ARGOCD_APP_NAME = 'your-argocd-app-name' // Replace with your ArgoCD Application name
     }
