@@ -52,17 +52,6 @@ pipeline {
             }
         }
 
-        stage('Build Docker Image') {
-            steps {
-                container('docker') {
-                    script {
-                        // Using the Dockerfile from the 'node-hello-world' directory
-                        dockerImage = docker.build("muhnishmalk/node-hello-world", "-f node-hello-world .")
-                    }
-                }
-            }
-        }
-
         stage('Push to DockerHub') {
             steps {
                 container('docker') {
@@ -75,7 +64,7 @@ pipeline {
                             """
 
                             // Build and tag the image with the build number
-                            sh "docker build -t muhnishmalk/node-hello-world:\$BUILD_NUMBER ."
+                            sh "docker build -t muhnishmalk/node-hello-world:\$BUILD_NUMBER node-hello-world/ ."
 
                             // Push the image to DockerHub
                             sh "docker push muhnishmalk/node-hello-world:\$BUILD_NUMBER"
