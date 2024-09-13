@@ -1,7 +1,7 @@
 pipeline {
     agent {
         kubernetes {
-            yaml """
+            yaml '''
             apiVersion: v1
             kind: Pod
             spec:
@@ -30,7 +30,7 @@ pipeline {
                 - name: docker-socket
                   hostPath:
                       path: /var/run/docker.sock
-            """
+            '''
         }
     }
 
@@ -41,7 +41,7 @@ pipeline {
         ARGOCD_APP_NAME = 'your-argocd-app-name'
         IMAGE_NAME = "muhnishmalk/node-hello-world"
         BUILD_TAG = "${IMAGE_NAME}:${BUILD_NUMBER}"
-        PREVIOUS_IMAGE_TAG = "${IMAGE_NAME}:previous" 
+        PREVIOUS_IMAGE_TAG = "${IMAGE_NAME}:previous"
     }
 
     stages {
@@ -70,6 +70,9 @@ pipeline {
 
                             sh "docker tag ${BUILD_TAG} ${IMAGE_NAME}:latest"
                             sh "docker push ${IMAGE_NAME}:latest"
+
+                            // Store build and tag information in a text file
+                            sh "echo \"Build Tag: ${BUILD_TAG}\" > build_info.txt"
                         }
                     }
                 }
@@ -115,6 +118,8 @@ pipeline {
         }
         always {
             deleteDir() // Clean up the workspace
+            // Archive the build_info.txt file as an artifact
+            archiveArtifacts 'build_info.txt'
         }
     }
 }
