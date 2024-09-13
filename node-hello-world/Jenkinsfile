@@ -45,34 +45,31 @@ pipeline {
     }
 
     stages {
-        stage('Prepare') {
-            steps {
-                container('ubuntu') {
-                    script {
-                        sh '''
-                        apt-get update && apt-get install -y curl git
-                        '''
-                    }
-                }
-            }
-        }
-
         stage('Build and Push Docker Image') {
             steps {
                 container('docker') {
                     script {
-                        withCredentials([usernamePassword(credentialsId: DOCKERHUB_CREDENTIALS, usernameVariable: 'DOCKER_HUB_USERNAME', passwordVariable: 'DOCKER_HUB_PASSWORD')]) {
-                            sh """
-                            echo \$DOCKER_HUB_PASSWORD | docker login -u \$DOCKER_HUB_USERNAME --password-stdin
-                            """
-                            sh "docker build -t ${BUILD_TAG} node-hello-world/"
-                            sh "docker push ${BUILD_TAG}"
+                        try {
+                            withCredentials([usernamePassword(credentialsId: DOCKERHUB_CREDENTIALS, usernameVariable: 'DOCKER_HUB_USERNAME', passwordVariable: 'DOCKER_HUB_PASSWORD')]) {
+                                sh """
+                                echo \$DOCKER_HUB_PASSWORD | docker login -u \$DOCKER_HUB_USERNAME --password-stdin
+                                """
+                                sh "docker build -t ${BUILD_TAG} node-hello-world/"
+                                sh "docker push ${BUILD_TAG}"
 
-                            sh "docker tag ${BUILD_TAG} ${IMAGE_NAME}:latest"
+                                // Tag the new image as latest
+                                sh "docker tag ${BUILD_TAG} ${IMAGE_NAME}:latest"
+                                sh "docker push ${IMAGE_NAME}:latest"
+
+                                // Store the success build tag in an artifact file
+                                sh "echo ${BUILD_TAG} > success_build_tag.txt"
+                                archiveArtifacts artifacts: 'success_build_tag.txt'
+                            }
+                        } catch (Exception e) {
+                            // Rollback in case of failure
+                            echo "Build failed. Rolling back to previous image."
+                            sh "docker tag ${PREVIOUS_IMAGE_TAG} ${IMAGE_NAME}:latest"
                             sh "docker push ${IMAGE_NAME}:latest"
-
-                            // Store build and tag information in a text file
-                            sh "echo \"Build Name: ${IMAGE_NAME}\nBuild Tag: ${BUILD_TAG}\" > build_info.txt"
                         }
                     }
                 }
@@ -118,8 +115,6 @@ pipeline {
         }
         always {
             deleteDir() // Clean up the workspace
-            // Archive the build_info.txt file as an artifact
-            archiveArtifacts 'build_info.txt'
         }
     }
 }
