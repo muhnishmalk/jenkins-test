@@ -67,10 +67,10 @@ pipeline {
                             """
 
                             // Build new image from Dockerfile in the workspace
-                            sh "docker build -t ${BUILD_TAG} ."
+                            sh "docker build -t muhnishmalk/node-hello-world:${BUILD_TAG} node-hello-world/ "
 
                             // Push the new image
-                            sh "docker push ${BUILD_TAG}"
+                            sh "docker push muhnishmalk/node-hello-world:${BUILD_TAG}"
 
                             // Tag the new image as latest
                             sh "docker tag ${BUILD_TAG} ${IMAGE_NAME}:latest"
