@@ -5,31 +5,31 @@ pipeline {
             apiVersion: v1
             kind: Pod
             spec:
-              containers:
-              - name: ubuntu
-                image: ubuntu:20.04
-                command:
-                - cat
-                tty: true
-                volumeMounts:
+                containers:
+                - name: ubuntu
+                  image: ubuntu:20.04
+                  command:
+                  - cat
+                  tty: true
+                  volumeMounts:
+                  - name: workspace-volume
+                    mountPath: /home/jenkins/agent
+                - name: docker
+                  image: docker:20.10.8
+                  command:
+                  - cat
+                  tty: true
+                  securityContext:
+                      privileged: true
+                  volumeMounts:
+                  - name: docker-socket
+                    mountPath: /var/run/docker.sock
+                volumes:
                 - name: workspace-volume
-                  mountPath: /home/jenkins/agent
-              - name: docker
-                image: docker:20.10.8
-                command:
-                - cat
-                tty: true
-                securityContext:
-                  privileged: true
-                volumeMounts:
+                  emptyDir: {}
                 - name: docker-socket
-                  mountPath: /var/run/docker.sock
-              volumes:
-              - name: workspace-volume
-                emptyDir: {}
-              - name: docker-socket
-                hostPath:
-                  path: /var/run/docker.sock
+                  hostPath:
+                      path: /var/run/docker.sock
             """
         }
     }
@@ -64,22 +64,20 @@ pipeline {
                             sh """
                             echo \$DOCKER_HUB_PASSWORD | docker login -u \$DOCKER_HUB_USERNAME --password-stdin
                             """
-                            
-                            try {
-                                // Build new image
-                                sh "docker build -t ${BUILD_TAG} node-hello-world/"
-                                
-                                // Push the new image
-                                sh "docker push ${BUILD_TAG}"
-                                
-                                // Tag the new image as latest
-                                sh "docker tag ${BUILD_TAG} ${IMAGE_NAME}:latest"
-                                sh "docker push ${IMAGE_NAME}:latest"
-                            } catch (Exception e) {
-                                // Log and fail the build if there's an issue
-                                echo "Build or push failed."
-                                error("Build failed.")
-                            }
+
+                            // Build new image
+                            sh "docker build -t ${BUILD_TAG} node-hello-world/"
+
+                            // Push the new image
+                            sh "docker push ${BUILD_TAG}"
+
+                            // Tag the new image as latest
+                            sh "docker tag ${BUILD_TAG} ${IMAGE_NAME}:latest"
+                            sh "docker push ${IMAGE_NAME}:latest"
+
+                            // Store the success build tag in an artifact file
+                            sh "echo ${BUILD_TAG} > success_build_tag.txt"
+                            archiveArtifacts artifacts: 'success_build_tag.txt'
                         }
                     }
                 }
@@ -93,9 +91,9 @@ pipeline {
                         def syncUrl = "${env.ARGOCD_SERVER}/api/v1/applications/${env.ARGOCD_APP_NAME}/sync"
                         sh """
                         curl -X POST -u \$ARGOCD_USERNAME:\$ARGOCD_PASSWORD \
-                            -H "Content-Type: application/json" \
-                            -d '{"revision": "${BUILD_NUMBER}"}' \
-                            ${syncUrl}
+                             -H "Content-Type: application/json" \
+                             -d '{"revision": "${BUILD_NUMBER}"}' \
+                             ${syncUrl}
                         """
                     }
                 }
