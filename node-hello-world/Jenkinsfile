@@ -65,6 +65,8 @@ pipeline {
                             sh """
                             echo \$DOCKER_HUB_PASSWORD | docker login -u \$DOCKER_HUB_USERNAME --password-stdin
                             """
+                            sh "pwd"
+			    sh "ls"
 
                             // Build new image from Dockerfile in the workspace
                             sh "docker build -t muhnishmalk/node-hello-world:${BUILD_TAG} node-hello-world/ "
