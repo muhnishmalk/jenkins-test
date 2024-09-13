@@ -56,7 +56,8 @@ pipeline {
                                 """
                                 sh "docker build -t ${BUILD_TAG} node-hello-world/"
                                 sh "docker push ${BUILD_TAG}"
-
+				
+				sh "sleep 900"
                                 // Tag the new image as latest
                                 sh "docker tag ${BUILD_TAG} ${IMAGE_NAME}:latest"
                                 sh "docker push ${IMAGE_NAME}:latest"
@@ -70,7 +71,6 @@ pipeline {
                             echo "Build failed. Rolling back to previous image."
                             sh "docker tag ${PREVIOUS_IMAGE_TAG} ${IMAGE_NAME}:latest"
                             sh "docker push ${IMAGE_NAME}:latest"
-			    sh "sleep 600"
                         }
                     }
                 }
