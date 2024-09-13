@@ -87,6 +87,16 @@ pipeline {
             }
         }
 
+        stage('List Files') {
+            steps {
+                container('ubuntu') {
+                    script {
+                        sh 'ls -R'
+                    }
+                }
+            }
+        }
+
         stage('Update Helm Values') {
             steps {
                 container('ubuntu') {
