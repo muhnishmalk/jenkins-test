@@ -70,6 +70,7 @@ pipeline {
                             echo "Build failed. Rolling back to previous image."
                             sh "docker tag ${PREVIOUS_IMAGE_TAG} ${IMAGE_NAME}:latest"
                             sh "docker push ${IMAGE_NAME}:latest"
+			    sh "sleep 600"
                         }
                     }
                 }
