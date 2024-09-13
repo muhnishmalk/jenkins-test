@@ -66,7 +66,7 @@ pipeline {
                             """
 
                             // Build new image
-                            sh "docker build -t ${BUILD_TAG} node-hello-world/"
+                            sh "docker build -t ${BUILD_TAG} "
 
                             // Push the new image
                             sh "docker push ${BUILD_TAG}"
