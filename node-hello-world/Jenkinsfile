@@ -82,7 +82,7 @@ pipeline {
                     script {
                         // Update Helm values.yaml file with new image tag
                         sh """
-                        sed -i 's|tag: latest|tag: ${BUILD_TAG}|g' k8s/values.yaml
+                        sed -i 's|tag: latest|tag: ${BUILD_TAG}|g' node-hello-world/k8s/values.yaml
                         """
                     }
                 }
