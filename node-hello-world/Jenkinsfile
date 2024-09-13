@@ -1,120 +1,120 @@
 pipeline {
-    agent {
-        kubernetes {
-            yaml '''
-            apiVersion: v1
-            kind: Pod
-            spec:
-                containers:
-                - name: ubuntu
-                  image: ubuntu:20.04
-                  command:
-                  - cat
-                  tty: true
-                  volumeMounts:
-                  - name: workspace-volume
-                    mountPath: /home/jenkins/agent
-                - name: docker
-                  image: docker:20.10.8
-                  command:
-                  - cat
-                  tty: true
-                  securityContext:
-                      privileged: true
-                  volumeMounts:
-                  - name: docker-socket
-                    mountPath: /var/run/docker.sock
-                volumes:
-                - name: workspace-volume
-                  emptyDir: {}
-                - name: docker-socket
-                  hostPath:
-                      path: /var/run/docker.sock
-            '''
-        }
-    }
+    agent {
+        kubernetes {
+            yaml '''
+            apiVersion: v1
+            kind: Pod
+            spec:
+                containers:
+                - name: ubuntu
+                  image: ubuntu:20.04
+                  command:
+                  - cat
+                  tty: true
+                  volumeMounts:
+                  - name: workspace-volume
+                    mountPath: /home/jenkins/agent
+                - name: docker
+                  image: docker:20.10.8
+                  command:
+                  - cat
+                  tty: true
+                  securityContext:
+                      privileged: true
+                  volumeMounts:
+                  - name: docker-socket
+                    mountPath: /var/run/docker.sock
+                volumes:
+                - name: workspace-volume
+                  emptyDir: {}
+                - name: docker-socket
+                  hostPath:
+                      path: /var/run/docker.sock
+            '''
+        }
+    }
 
-    environment {
-        DOCKERHUB_CREDENTIALS = 'dockerhub-credentials'
-        ARGOCD_SERVER = 'http://192.168.49.2:31313'
-        ARGOCD_CREDENTIALS = 'argocd-credentials'
-        ARGOCD_APP_NAME = 'your-argocd-app-name'
-        IMAGE_NAME = "muhnishmalk/node-hello-world"
-        BUILD_TAG = "${IMAGE_NAME}:${BUILD_NUMBER}"
-        PREVIOUS_IMAGE_TAG = "${IMAGE_NAME}:previous"
-    }
+    environment {
+        DOCKERHUB_CREDENTIALS = 'dockerhub-credentials'
+        ARGOCD_SERVER = 'http://192.168.49.2:31313'
+        ARGOCD_CREDENTIALS = 'argocd-credentials'
+        ARGOCD_APP_NAME = 'your-argocd-app-name'
+        IMAGE_NAME = "muhnishmalk/node-hello-world"
+        BUILD_TAG = "${IMAGE_NAME}:${BUILD_NUMBER}"
+        PREVIOUS_IMAGE_TAG = "${IMAGE_NAME}:previous"
+    }
 
-    stages {
-        stage('Build and Push Docker Image') {
-            steps {
-                container('docker') {
-                    script {
-                        try {
-                            withCredentials([usernamePassword(credentialsId: DOCKERHUB_CREDENTIALS, usernameVariable: 'DOCKER_HUB_USERNAME', passwordVariable: 'DOCKER_HUB_PASSWORD')]) {
-                                sh """
-                                echo \$DOCKER_HUB_PASSWORD | docker login -u \$DOCKER_HUB_USERNAME --password-stdin
-                                """
-                                sh "docker build -t ${BUILD_TAG} node-hello-world/"
-                                sh "docker push ${BUILD_TAG}"
+    stages {
+        stage('Build and Push Docker Image') {
+            steps {
+                container('docker') {
+                    script {
+                        try {
+                            withCredentials([usernamePassword(credentialsId: DOCKERHUB_CREDENTIALS, usernameVariable: 'DOCKER_HUB_USERNAME', passwordVariable: 'DOCKER_HUB_PASSWORD')]) {
+                                sh """
+                                echo \$DOCKER_HUB_PASSWORD | docker login -u \$DOCKER_HUB_USERNAME --password-stdin
+                                """
+                                sh "docker build -t ${BUILD_TAG} node-hello-world/"
+                                sh "docker push ${BUILD_TAG}"
 
-                                // Tag the new image as latest
-                                sh "docker tag ${BUILD_TAG} ${IMAGE_NAME}:latest"
-                                sh "docker push ${IMAGE_NAME}:latest"
+                                // Tag the new image as latest
+                                sh "docker tag ${BUILD_TAG} ${IMAGE_NAME}:latest"
+                                sh "docker push ${IMAGE_NAME}:latest"
 
-                                // Store the success build tag in an artifact file
-                                sh "echo ${BUILD_TAG} > success_build_tag.txt"
-                                archiveArtifacts artifacts: 'success_build_tag.txt'
-                            }
-                        } catch (Exception e) {
-                            // Rollback in case of failure
-                            echo "Build failed. Rolling back to previous image."
-                            sh "docker tag ${PREVIOUS_IMAGE_TAG} ${IMAGE_NAME}:latest"
-                            sh "docker push ${IMAGE_NAME}:latest"
-                        }
-                    }
-                }
-            }
-        }
+                                // Store the success build tag in an artifact file
+                                sh "echo ${BUILD_TAG} > success_build_tag.txt"
+                                archiveArtifacts artifacts: 'success_build_tag.txt'
+                            }
+                        } catch (Exception e) {
+                            // Rollback in case of failure
+                            echo "Build failed. Rolling back to previous image."
+                            sh "docker tag ${PREVIOUS_IMAGE_TAG} ${IMAGE_NAME}:latest"
+                            sh "docker push ${IMAGE_NAME}:latest"
+                        }
+                    }
+                }
+            }
+        }
 
-        stage('Update Helm Values') {
-            steps {
-                container('ubuntu') {
-                    script {
-                        // Update Helm values.yaml file with new image tag
-                        sh """
-                        sed -i 's|tag: latest|tag: ${BUILD_TAG}|g' node-hello-world/k8s/values.yaml
-                        """
-                    }
-                }
-            }
-        }
+        stage('Update Helm Values') {
+            steps {
+                container('ubuntu') {
+                    script {
+                        // Update Helm values.yaml file with new image tag
+                        sh """
+                        sed -i 's|tag: latest|tag: ${BUILD_TAG}|g' node-hello-world/k8s/values.yaml
+                        """
+                    }
+                }
+            }
+        }
 
-        stage('Sync with ArgoCD') {
-            steps {
-                withCredentials([usernamePassword(credentialsId: ARGOCD_CREDENTIALS, usernameVariable: 'ARGOCD_USERNAME', passwordVariable: 'ARGOCD_PASSWORD')]) {
-                    script {
-                        def syncUrl = "${env.ARGOCD_SERVER}/api/v1/applications/${env.ARGOCD_APP_NAME}/sync"
-                        sh """
-                        curl -X POST -u \$ARGOCD_USERNAME:\$ARGOCD_PASSWORD \
-                             -H "Content-Type: application/json" \
-                             -d '{"revision": "${BUILD_NUMBER}"}' \
-                             ${syncUrl}
-                        """
-                    }
-                }
-            }
-        }
-    }
+        stage('Sync with ArgoCD') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: ARGOCD_CREDENTIALS, usernameVariable: 'ARGOCD_USERNAME', passwordVariable: 'ARGOCD_PASSWORD')]) {
+                    script {
+                        def syncUrl = "${env.ARGOCD_SERVER}/api/v1/applications/${env.ARGOCD_APP_NAME}/sync"
+                        sh """
+                        curl -X POST -u \$ARGOCD_USERNAME:\$ARGOCD_PASSWORD \
+                             -H "Content-Type: application/json" \
+                             -d '{"revision": "${BUILD_NUMBER}"}' \
+                             ${syncUrl}
+                        """
+                    }
+                }
+            }
+        }
+    }
 
-    post {
-        success {
-            echo 'Build and push successful, and ArgoCD sync triggered.'
-        }
-        failure {
-            echo 'Build failed.'
-        }
-        always {
-            deleteDir() // Clean up the workspace
-        }
-    }
+    post {
+        success {
+            echo 'Build and push successful, and ArgoCD sync triggered.'
+        }
+        failure {
+            echo 'Build failed.'
+        }
+        always {
+            deleteDir() // Clean up the workspace
+        }
+    }
 }
