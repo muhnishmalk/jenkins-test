@@ -104,6 +104,21 @@ pipeline {
                 }
             }
         }
+
+        stage('Check ArgoCD Application Health') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: ARGOCD_CREDENTIALS, usernameVariable: 'ARGOCD_USERNAME', passwordVariable: 'ARGOCD_PASSWORD')]) {
+                    script {
+                        def healthCheckUrl = "${env.ARGOCD_SERVER}/api/v1/applications/${env.ARGOCD_APP_NAME}"
+                        sh """
+                        curl -X GET -u \$ARGOCD_USERNAME:\$ARGOCD_PASSWORD \
+                             -H "Content-Type: application/json" \
+                             ${healthCheckUrl} | jq '.status.health'
+                        """
+                    }
+                }
+            }
+        }
     }
 
     post {
