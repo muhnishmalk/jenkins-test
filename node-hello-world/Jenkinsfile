@@ -65,7 +65,7 @@ pipeline {
                             sh """
                             echo \$DOCKER_HUB_PASSWORD | docker login -u \$DOCKER_HUB_USERNAME --password-stdin
                             """
-                            sh "docker build -t ${BUILD_TAG} ."
+                            sh "docker build -t ${BUILD_TAG} node-hello-world/"
                             sh "docker push ${BUILD_TAG}"
 
                             sh "docker tag ${BUILD_TAG} ${IMAGE_NAME}:latest"
