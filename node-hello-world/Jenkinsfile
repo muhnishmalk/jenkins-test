@@ -41,6 +41,7 @@ pipeline {
         ARGOCD_APP_NAME = 'your-argocd-app-name'
         IMAGE_NAME = "muhnishmalk/node-hello-world"
         BUILD_TAG = "${IMAGE_NAME}:${BUILD_NUMBER}"
+        PREVIOUS_IMAGE_TAG = "${IMAGE_NAME}:previous" // Tag used for rollback
     }
 
     stages {
@@ -65,19 +66,38 @@ pipeline {
                             echo \$DOCKER_HUB_PASSWORD | docker login -u \$DOCKER_HUB_USERNAME --password-stdin
                             """
 
-                            // Build new image
-                            sh "docker build -t ${BUILD_TAG} "
+                            // Save the previous image before building the new one
+                            sh "docker pull ${IMAGE_NAME}:latest || true" // Pull previous image, if available
+                            sh "docker tag ${IMAGE_NAME}:latest ${PREVIOUS_IMAGE_TAG} || true" // Tag it for rollback
 
-                            // Push the new image
-                            sh "docker push ${BUILD_TAG}"
+                            try {
+                                // Build new image
+                                sh "docker build -t ${BUILD_TAG} node-hello-world/"
 
-                            // Tag the new image as latest
-                            sh "docker tag ${BUILD_TAG} ${IMAGE_NAME}:latest"
-                            sh "docker push ${IMAGE_NAME}:latest"
+                                // Push the new image
+                                sh "docker push ${BUILD_TAG}"
 
-                            // Store the success build tag in an artifact file
-                            sh "echo ${BUILD_TAG} > success_build_tag.txt"
-                            archiveArtifacts artifacts: 'success_build_tag.txt'
+                                // Tag the new image as latest
+                                sh "docker tag ${BUILD_TAG} ${IMAGE_NAME}:latest"
+                                sh "docker push ${IMAGE_NAME}:latest"
+
+                                // Store the success build tag in an artifact file
+                                sh "echo ${BUILD_TAG} > success_build_tag.txt"
+                                archiveArtifacts artifacts: 'success_build_tag.txt'
+                            } catch (Exception e) {
+                                // Rollback in case of failure
+                                echo "Build or push failed. Rolling back to previous image."
+
+                                // Retrieve the last success build tag from the artifact
+                                def lastSuccessBuildTag = sh(script: "cat success_build_tag.txt", returnStdout: true).trim()
+
+                                // Tag the previous success image as latest
+                                sh "docker tag ${lastSuccessBuildTag} ${IMAGE_NAME}:latest"
+                                sh "docker push ${IMAGE_NAME}:latest"
+
+                                // Fail the build after rollback
+                                error("Build failed. Rolled back to previous image.")
+                            }
                         }
                     }
                 }
@@ -107,7 +127,7 @@ pipeline {
         }
 
         failure {
-            echo 'Build failed.'
+            echo 'Build failed and rollback completed.'
         }
 
         always {
