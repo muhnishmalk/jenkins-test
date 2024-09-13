@@ -72,7 +72,7 @@ pipeline {
                             sh "docker push ${IMAGE_NAME}:latest"
 
                             // Store build and tag information in a text file
-                            sh "echo \"Build Tag: ${BUILD_TAG}\" > build_info.txt"
+                            sh "echo \"Build Name: ${IMAGE_NAME}\nBuild Tag: ${BUILD_TAG}\" > build_info.txt"
                         }
                     }
                 }
