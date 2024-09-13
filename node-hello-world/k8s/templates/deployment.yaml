@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   name: {{ include "node-hello-world.fullname" . }}
   labels:
-    {{- include "node-hello-world.labels" . | nindent 4 }}
+    app: {{ include "node-hello-world.name" . }}
 spec:
   replicas: {{ .Values.replicaCount }}
   selector:
@@ -15,7 +15,14 @@ spec:
         app: {{ include "node-hello-world.name" . }}
     spec:
       containers:
-      - name: node-hello-world
-        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
-        ports:
-        - containerPort: 3000
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          ports:
+            - containerPort: {{ .Values.service.port }}
+          resources:
+            limits:
+              cpu: {{ .Values.resources.limits.cpu }}
+              memory: {{ .Values.resources.limits.memory }}
+            requests:
+              cpu: {{ .Values.resources.requests.cpu }}
+              memory: {{ .Values.resources.requests.memory }}

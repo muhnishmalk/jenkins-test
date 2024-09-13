@@ -2,9 +2,33 @@ replicaCount: 2
 
 image:
   repository: muhnishmalk/node-hello-world
-  tag: latest
+  pullPolicy: IfNotPresent
+  tag: latest  # This will be updated by the Jenkins pipeline
 
 service:
-  type: NodePort
+  type: ClusterIP
   port: 3000
-  nodePort: 30001
+
+ingress:
+  enabled: false
+  annotations: {}
+  hosts:
+    - host: chart-example.local
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
+  tls: []
+
+resources:
+  limits:
+    cpu: 100m
+    memory: 128Mi
+  requests:
+    cpu: 100m
+    memory: 64Mi
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}

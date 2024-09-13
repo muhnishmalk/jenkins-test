@@ -41,7 +41,7 @@ pipeline {
         ARGOCD_APP_NAME = 'your-argocd-app-name'
         IMAGE_NAME = "muhnishmalk/node-hello-world"
         BUILD_TAG = "${IMAGE_NAME}:${BUILD_NUMBER}"
-        PREVIOUS_IMAGE_TAG = "${IMAGE_NAME}:previous" // Tag used for rollback
+        PREVIOUS_IMAGE_TAG = "${IMAGE_NAME}:previous" 
     }
 
     stages {
@@ -65,33 +65,12 @@ pipeline {
                             sh """
                             echo \$DOCKER_HUB_PASSWORD | docker login -u \$DOCKER_HUB_USERNAME --password-stdin
                             """
-                            sh "pwd"
-                            sh "ls"
-
-                            // Build new image from Dockerfile in the workspace
-                            sh "docker build -t ${BUILD_TAG} node-hello-world/"
-
-                            // Push the new image
+                            sh "docker build -t ${BUILD_TAG} ."
                             sh "docker push ${BUILD_TAG}"
 
-                            // Tag the new image as latest
                             sh "docker tag ${BUILD_TAG} ${IMAGE_NAME}:latest"
                             sh "docker push ${IMAGE_NAME}:latest"
-
-                            // Store the success build tag in an artifact file
-                            sh "echo ${BUILD_TAG} > success_build_tag.txt"
-                            archiveArtifacts artifacts: 'success_build_tag.txt'
                         }
-                    }
-                }
-            }
-        }
-
-        stage('List Files') {
-            steps {
-                container('ubuntu') {
-                    script {
-                        sh 'ls -R'
                     }
                 }
             }
@@ -101,11 +80,9 @@ pipeline {
             steps {
                 container('ubuntu') {
                     script {
-			sh "pwd"
-			sh "ls"
-                        // Replace the tag in values.yaml with the build tag
+                        // Update Helm values.yaml file with new image tag
                         sh """
-                        sed -i 's|tag: latest|tag: ${BUILD_TAG}|g' node-hello-world/k8s/values.yaml
+                        sed -i 's|tag: latest|tag: ${BUILD_TAG}|g' k8s/values.yaml
                         """
                     }
                 }
@@ -133,11 +110,9 @@ pipeline {
         success {
             echo 'Build and push successful, and ArgoCD sync triggered.'
         }
-
         failure {
-            echo 'Build failed and rollback completed.'
+            echo 'Build failed.'
         }
-
         always {
             deleteDir() // Clean up the workspace
         }
